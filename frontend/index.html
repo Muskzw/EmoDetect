@@ -2240,7 +2240,10 @@
 
                 // Auto-save report if enabled
                 if (typeof appSettings !== 'undefined' && appSettings.autoSaveReports) {
-                    generateReport();
+                    // unexpected browser behavior: interfering downloads
+                    setTimeout(() => {
+                        generateReport();
+                    }, 1500);
                 }
             }
         }
