@@ -34,6 +34,15 @@
             overflow-x: hidden;
         }
 
+        body.compact-mode header {
+            padding: 5px 0;
+            margin-bottom: 15px;
+        }
+
+        body.compact-mode .logo span {
+            display: none;
+        }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -1497,6 +1506,14 @@
         let isCameraActive = false;
         let isAudioActive = false;
         let audioContext = null;
+
+        // Global Settings
+        let appSettings = {
+            aiSensitivity: 'medium',
+            realTimeProcessing: true,
+            compactMode: false,
+            autoSaveReports: false
+        };
         let analyser = null;
         let microphone = null;
         let javascriptNode = null;
@@ -1571,6 +1588,7 @@
         }
 
         // Start capturing images during recording
+
         function startImageCapture() {
             if (!isCameraActive) return;
 
@@ -1579,12 +1597,25 @@
                 clearInterval(captureInterval);
             }
 
-            // Start capturing images every 2 seconds (adjust as needed)
+            // Determine interval based on sensitivity
+            let interval = 2000;
+            if (typeof appSettings !== 'undefined') {
+                switch (appSettings.aiSensitivity) {
+                    case 'high': interval = 500; break;
+                    case 'medium': interval = 1500; break;
+                    case 'low': interval = 3000; break;
+                }
+            }
+
+            // Start capturing images
             captureInterval = setInterval(() => {
                 if (isRecording && !isProcessing && processingQueue.length < maxQueueSize) {
+                    // Check if real-time processing is enabled
+                    if (typeof appSettings !== 'undefined' && !appSettings.realTimeProcessing) return;
+
                     captureAndProcessImage();
                 }
-            }, 2000); // Capture every 2 seconds
+            }, interval);
         }
 
         // Stop image capture
@@ -1870,15 +1901,15 @@
                 // Play the local video track in the video-feed container
                 localTracks[1].play("video-feed");
 
-                // Initialize videoStream as a s                eam for recording
-                videoStream = new MediaStre                    etMediaStr                               await client.publ                                  /*videoStream                         evices.getUserMedia(                       v                                 w                280                                 t:                
-                        facingMode: 'user                       }, 
-                    audio: false 
-                });
-                
-                
+                // Initialize videoStream from Agora track for recording
+                if (localTracks && localTracks[1]) {
+                    const track = localTracks[1].getMediaStreamTrack();
+                    if (track) {
+                        videoStream = new MediaStream([track]);
+                    }
+                }
+
                 permissionMessage.style.display = 'none';
-                */
                 isCameraActive = true;
                 startCameraBtn.classList.add('active');
 
@@ -2206,6 +2237,11 @@
                 processingQueue = [];
 
                 console.log('Recording stopped');
+
+                // Auto-save report if enabled
+                if (typeof appSettings !== 'undefined' && appSettings.autoSaveReports) {
+                    generateReport();
+                }
             }
         }
 
@@ -2607,10 +2643,49 @@
         function exportData() {
             // In a real application, this would generate a CSV or JSON file
             alert('Data export functionality would be implemented here. This would generate a CSV file with all analytics data.');
-   // Generate report function
-        function generateReport() {
-            // In a real application, this would generate a PDF report
-            alert('Report generation functionality would be implemented here. This would create a PDF report with analytics insights.');
+        }
+
+        // Generate report function
+        async function generateReport() {
+            try {
+                // Collect analytics data
+                const reportData = {
+                    totalDetections: analyticsData.totalDetections || 0,
+                    avgConfidence: document.getElementById('avg-confidence').innerText || "0%",
+                    dominantEmotion: document.getElementById('dominant-emotion').innerText || "-",
+                    emotionCounts: analyticsData.emotionCounts || {},
+                    emotionConfidences: analyticsData.emotionConfidences || {}
+                };
+
+                showStatusMessage('Generating PDF report...', 'info');
+
+                const response = await fetch('http://127.0.0.1:8000/generate-report', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(reportData)
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `EmoDetect_Report_${new Date().toISOString().slice(0, 10)}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    showStatusMessage('Report generated and downloaded!', 'success');
+                } else {
+                    console.error('Failed to generate report:', response.statusText);
+                    showStatusMessage('Failed to generate report. Is the backend running?', 'error');
+                }
+            } catch (error) {
+                console.error('Error generating report:', error);
+                showStatusMessage('Error generating report. Check console.', 'error');
+            }
         }
 
         // Show status message
@@ -2638,7 +2713,7 @@
 
             // Audio control
             toggleAudioBtn.addEventListener('click', toggleAudio);
-         .addEventListener('click', startAudio);
+            retryAudioBtn.addEventListener('click', startAudio);
 
             // Recording control
             recordSessionBtn.addEventListener('click', toggleRecording);
@@ -2646,8 +2721,10 @@
 
             // Recording modal control
             closeRecordingBtn.addEventListener('click', hideRecordingModal);
-            deleteAllRecordingsBtn.addEventListener('click', deleteAllRecordi  openRecordingsFolderBtn.addEventListener('click', () => {
-                alert('In a real application, this would open tlder.');
+            deleteAllRecordingsBtn.addEventListener('click', deleteAllRecordings);
+
+            openRecordingsFolderBtn.addEventListener('click', () => {
+                alert('In a real application, this would open the recordings folder.');
             });
 
             // Fullscreen control
@@ -2694,6 +2771,31 @@
             });
 
             saveSettingsBtn.addEventListener('click', () => {
+                // Save values
+                if (typeof appSettings !== 'undefined') {
+                    const sensitivityElem = document.getElementById('ai-sensitivity');
+                    const realTimeElem = document.getElementById('real-time-toggle');
+                    const compactElem = document.getElementById('compact-mode-toggle');
+                    const autoSaveElem = document.getElementById('auto-save-toggle');
+
+                    if (sensitivityElem) appSettings.aiSensitivity = sensitivityElem.value;
+                    if (realTimeElem) appSettings.realTimeProcessing = realTimeElem.checked;
+                    if (compactElem) appSettings.compactMode = compactElem.checked;
+                    if (autoSaveElem) appSettings.autoSaveReports = autoSaveElem.checked;
+
+                    // Apply Compact Mode
+                    if (appSettings.compactMode) {
+                        document.body.classList.add('compact-mode');
+                    } else {
+                        document.body.classList.remove('compact-mode');
+                    }
+
+                    // Restart Capture with new settings if recording
+                    if (typeof isRecording !== 'undefined' && isRecording) {
+                        startImageCapture(); // This will restart with new interval
+                    }
+                }
+
                 showStatusMessage('Settings saved successfully!', 'success');
                 settingsModal.style.display = 'none';
             });
@@ -2713,7 +2815,7 @@
                         analyticsData.emotionCounts[em] = 0;
                         analyticsData.emotionConfidences[em] = [];
                     });
-                    
+
                     // Clear UI
                     document.querySelector('.history-list').innerHTML = '';
                     if (window.updateAnalyticsDashboard) {
@@ -2732,7 +2834,7 @@
             document.querySelectorAll('.control-btn').forEach(btn => {
                 btn.addEventListener('click', function () {
                     // Skip camera, audio, and analytics buttons as they're handled separately
-                    if (this.id !== 'start-camera' && this.id !== 'toggle-au &&d !== 'analyze-mode') {
+                    if (this.id !== 'start-camera' && this.id !== 'toggle-audio' && this.id !== 'analyze-mode') {
                         this.classList.toggle('active');
                     }
 
