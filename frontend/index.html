@@ -11,13 +11,15 @@
     <style>
         :root {
             --primary: #6C63FF;
-            --secondary: #4A44C6;
-            --accent: #FF6584;
-            --success: #36D1DC;
-            --background: #1A1A2E;
-            --card-bg: #16213E;
+            --primary-glow: rgba(108, 99, 255, 0.5);
+            --secondary: #FF6584;
+            --accent: #36D1DC;
+            --background: #0f0f1a;
+            --card-bg: rgba(22, 33, 62, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
             --text: #FFFFFF;
             --text-secondary: #B8B8D1;
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
         * {
@@ -29,9 +31,13 @@
 
         body {
             background-color: var(--background);
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(108, 99, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(255, 101, 132, 0.1) 0%, transparent 40%);
             color: var(--text);
             min-height: 100vh;
             overflow-x: hidden;
+            font-family: var(--font-main);
         }
 
         body.compact-mode header {
@@ -114,23 +120,30 @@
             gap: 30px;
         }
 
-        .video-section {
+        .video-section,
+        .stats-section,
+        .analytics-card {
             background-color: var(--card-bg);
             border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
         }
 
         .video-container {
             position: relative;
             width: 100%;
             height: 500px;
-            border-radius: 15px;
+            border-radius: 20px;
             overflow: hidden;
-            background: linear-gradient(135deg, #0F3460, #1A1A2E);
+            background: rgba(0, 0, 0, 0.3);
             display: flex;
             justify-content: center;
             align-items: center;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 0 30px rgba(108, 99, 255, 0.1);
         }
 
         .video-container.fullscreen {
@@ -244,41 +257,34 @@
         }
 
         .control-btn {
-            width: 60px;
-            height: 60px;
+            width: 65px;
+            height: 65px;
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            background: var(--card-bg);
-            border: 2px solid var(--primary);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
             color: var(--text);
-            font-size: 20px;
+            font-size: 22px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+            box-shadow: 0 10px 25px rgba(108, 99, 255, 0.3);
         }
 
         .control-btn.active {
             background: var(--primary);
+            border-color: var(--primary);
             color: white;
-            box-shadow: 0 0 20px rgba(108, 99, 255, 0.5);
-        }
-
-        .control-btn.recording {
-            background: rgba(244, 67, 54, 0.2);
-            border-color: #F44336;
-            color: #F44336;
-            animation: pulse 1.5s infinite;
-        }
-
-        .control-btn.muted {
-            background: rgba(244, 67, 54, 0.2);
-            border-color: #F44336;
-            color: #F44336;
-        }
-
-        .control-btn:hover {
-            transform: scale(1.1);
+            box-shadow: 0 0 30px var(--primary-glow);
         }
 
         .stats-section {
