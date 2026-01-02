@@ -1122,16 +1122,21 @@
                     </button>
                 </div>
 
-                <!-- NEW: Session Timeline to fill space -->
-                <div class="timeline-section" style="margin-top: 30px; min-height: 200px;">
+                <!-- NEW: AI Empathy Coach -->
+                <div class="timeline-section"
+                    style="margin-top: 30px; min-height: 200px; border-left: 4px solid var(--primary);">
                     <div class="section-title">
-                        <i class="fas fa-history"></i>
-                        <span>Session Activity Log</span>
+                        <i class="fas fa-lightbulb" style="color: #FFC107;"></i>
+                        <span>AI Empathy Coach</span>
                     </div>
-                    <div id="session-timeline"
-                        style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
-                        <div style="color: var(--text-secondary); font-style: italic;">Session started... waiting for
-                            activity.</div>
+                    <div id="empathy-coach-content" style="padding: 10px;">
+                        <div style="font-size: 1.1em; margin-bottom: 10px; font-weight: 600;" id="coach-title">
+                            Waiting for emotional cues...
+                        </div>
+                        <p style="color: var(--text-secondary); line-height: 1.5;" id="coach-advice">
+                            Start the camera to receive real-time communication advice based on the subject's emotional
+                            state.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -1876,52 +1881,80 @@
             // Update Live Chart
             updateLiveChart(detectedEmotion, detectedConfidence);
 
-            // Add to Timeline
-            addToTimeline(detectedEmotion, detectedConfidence);
+            // Update Empathy Coach
+            updateEmpathyCoach(detectedEmotion, detectedConfidence);
         }
 
-        function addToTimeline(emotion, confidence) {
-            const timeline = document.getElementById('session-timeline');
-            if (timeline && timeline.children.length > 0 && timeline.children[0].textContent.includes('Session started...')) {
-                timeline.innerHTML = '';
+        // COACHING LOGIC
+        const coachingTips = {
+            'Happy': {
+                title: "Subject is Receptive!",
+                advice: "Great moment to pitch ideas or ask for commitments. Mirror their positive energy to build stronger rapport."
+            },
+            'Sad': {
+                title: "Show Empathy",
+                advice: "Slow down your speaking rate. Use a softer tone. Ask open-ended questions like 'How can we help?' to make them feel heard."
+            },
+            'Angry': {
+                title: "De-escalation Needed",
+                advice: "Stay calm. Do not interrupt. Acknowledge their frustration specifically ('I can see why that is upsetting') before offering solutions."
+            },
+            'Fear': {
+                title: "Build Trust",
+                advice: "They may feel uncertain. Provide reassurance, facts, and clear next steps to reduce anxiety. Avoid pressure."
+            },
+            'Surprised': {
+                title: "Clarification Opportunity",
+                advice: "Check if the surprise is positive or negative. Ask: 'Is this what you expected?' to find alignment."
+            },
+            'Disgusted': {
+                title: "Pivot Immediately",
+                advice: "Something just resonated poorly. Change the topic or ask for feedback on the specific point to rescue the interaction."
+            },
+            'Neutral': {
+                title: "Engage Them",
+                advice: "Subject is passive. Try using a hook, a story, or a direct question to stimulate emotional involvement."
+            },
+            'Contempt': {
+                title: "Damage Control",
+                advice: "High risk of disengagement. They may feel superior or dismissive. Respectfully ask for their expert opinion to re-engage."
             }
-            if (!timeline) return;
+        };
 
-            const item = document.createElement('div');
-            item.className = 'timeline-item';
+        let lastCoachUpdate = 0;
 
-            // Style for default dark mode
-            let bg = 'rgba(255,255,255,0.05)';
-            // Check for light mode
-            if (document.body.classList.contains('light-mode')) {
-                bg = 'rgba(0,0,0,0.05)';
-            }
+        function updateEmpathyCoach(emotion, confidence) {
+            const now = Date.now();
+            // Don't update too fast (every 3 seconds max) to allow reading
+            if (now - lastCoachUpdate < 3000) return;
 
-            item.style.cssText = `
-                display: flex; 
-                justify-content: space-between; 
-                padding: 10px; 
-                background: ${bg}; 
-                border-radius: 8px; 
-                border-left: 3px solid ${emotionColors[emotion] || '#fff'};
-                margin-top: 8px;
-            `;
+            const titleEl = document.getElementById('coach-title');
+            const adviceEl = document.getElementById('coach-advice');
+            const container = document.querySelector('.timeline-section'); // Re-using this class for style
 
-            const now = new Date();
-            const time = now.toLocaleTimeString();
+            if (!coachingTips[emotion]) return;
 
-            item.innerHTML = `
-                <span style="font-weight: 500;">${emotion}</span>
-                <span style="color: var(--text-secondary); font-size: 0.9em;">${time} • ${confidence}%</span>
-            `;
+            // Only update if confidence is decent
+            if (confidence > 40) {
+                // Animate out
+                titleEl.style.opacity = '0';
+                adviceEl.style.opacity = '0';
 
-            timeline.prepend(item);
+                setTimeout(() => {
+                    titleEl.innerText = coachingTips[emotion].title;
+                    adviceEl.innerText = coachingTips[emotion].advice;
+                    // Color code border
+                    if (container) container.style.borderLeftColor = emotionColors[emotion] || 'var(--primary)';
 
-            // Limit items
-            if (timeline.children.length > 50) {
-                timeline.removeChild(timeline.lastChild);
+                    // Animate in
+                    titleEl.style.opacity = '1';
+                    adviceEl.style.opacity = '1';
+                }, 200);
+
+                lastCoachUpdate = now;
             }
         }
+
 
         function updateLiveChart(dominantEmotion, confidence) {
             if (!window.liveEmotionChart) return;
