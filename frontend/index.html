@@ -2264,6 +2264,11 @@
                         generateReport();
                     }, 1500);
                 }
+
+                // Jarvis Voice Summary (Non-intrusive, post-call)
+                setTimeout(() => {
+                    speakSessionSummary();
+                }, 1000);
             }
         }
 
@@ -2500,6 +2505,31 @@
 
             // Update charts
             updateCharts();
+        }
+
+        // --- JARVIS VOICE ASSISTANT ---
+        function speakSessionSummary() {
+            if (!('speechSynthesis' in window)) return;
+
+            const total = analyticsData.totalDetections;
+            const duration = document.getElementById('session-duration').innerText;
+            const dominant = document.getElementById('dominant-emotion').innerText;
+            const confidence = document.getElementById('avg-confidence').innerText;
+
+            const text = `Session complete. I analyzed ${total} emotional responses over ${duration}. The dominant emotion was ${dominant} with an average confidence of ${confidence}. Report generated.`;
+
+            const utterance = new SpeechSynthesisUtterance(text);
+
+            // Try to find a good "tech" voice
+            const voices = window.speechSynthesis.getVoices();
+            const techVoice = voices.find(v => v.name.includes('Google US English') || v.name.includes('Samantha')) || voices[0];
+            if (techVoice) utterance.voice = techVoice;
+
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+
+            window.speechSynthesis.speak(utterance);
         }
 
         // Update analytics charts
