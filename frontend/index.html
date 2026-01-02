@@ -1497,8 +1497,21 @@
             emotionConfidences: {},
             emotionTimestamps: [],
             sessionStartTime: null,
-            totalDetections: 0
+            emotionTimestamps: [],
+            sessionStartTime: null,
+            totalDetections: 0,
+            confidenceHistory: [] // New for trend graph
         };
+
+        // Load persisted data if available
+        const savedData = localStorage.getItem('emoDetectSession');
+        if (savedData) {
+            try {
+                // Ensure we don't load stale data that might conflict with current session logic
+                // For a real app, you might want a "Load Previous Session" button instead
+                // analyticsData = JSON.parse(savedData); 
+            } catch (e) { console.error("Error loading saved data", e); }
+        }
 
         // Initialize analytics data
         emotions.forEach(emotion => {
@@ -2594,7 +2607,7 @@
                 }
             });
 
-            // Time Analysis Chart (Bar)
+            // Time Analysis Chart (Bar) - Kept as is
             const timeCtx = document.getElementById('time-analysis-chart').getContext('2d');
 
             // Destroy existing chart if it exists
@@ -2603,7 +2616,7 @@
             }
 
             // Generate sample time distribution data
-            const timeData = emotions.map(emotion => Math.floor(Math.random() * 30) + 10);
+            const timeData = emotions.map(emotion => Math.floor(Math.random() * 30) + 10); // Mock data for demo
 
             window.timeAnalysisChart = new Chart(timeCtx, {
                 type: 'bar',
