@@ -22,6 +22,19 @@
             --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
+        body.light-mode {
+            --background: #f4f7f6;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --text: #2d3436;
+            --text-secondary: #636e72;
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --primary-glow: rgba(108, 99, 255, 0.2);
+        }
+
+        body.light-mode header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -1104,11 +1117,8 @@
                 </div>
 
                 <div class="emotion-chart">
-                    <!-- Emotion chart would be implemented with a charting library -->
-                    <div
-                        style="display: flex; justify-content: center; align-items: center; height: 100%; color: var(--text-secondary);">
-                        Real-time emotion chart visualization
-                    </div>
+                    <!-- Real-time live chart -->
+                    <canvas id="live-emotion-chart" height="200"></canvas>
                 </div>
 
                 <div class="emotion-list">
@@ -1311,7 +1321,18 @@
                         <p>Analyze emotions every 1 second (Auto-Capture).</p>
                     </div>
                     <label class="switch">
-                        <input type="checkbox" id="real-time-toggle" checked>
+                        <input type="checkbox" id="auto-save-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-info">
+                        <h4>Theme</h4>
+                        <p>Toggle between Dark and Light mode.</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="theme-toggle">
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -1531,7 +1552,8 @@
             aiSensitivity: 'medium',
             realTimeProcessing: true,
             compactMode: false,
-            autoSaveReports: true
+            autoSaveReports: true,
+            theme: 'dark'
         };
         let analyser = null;
         let microphone = null;
@@ -1824,6 +1846,40 @@
                     updateEmotionItem(item, emotionName, randomConfidence);
                 }
             });
+
+            // Update Live Chart
+            updateLiveChart(detectedEmotion, detectedConfidence);
+        }
+
+        function updateLiveChart(dominantEmotion, confidence) {
+            if (!window.liveEmotionChart) return;
+
+            const now = new Date();
+            const timeLabel = now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds();
+
+            // Add label
+            window.liveEmotionChart.data.labels.push(timeLabel);
+
+            // Keep only last 20 points
+            if (window.liveEmotionChart.data.labels.length > 20) {
+                window.liveEmotionChart.data.labels.shift();
+            }
+
+            // Update datasets
+            window.liveEmotionChart.data.datasets.forEach(dataset => {
+                let val = Math.floor(Math.random() * 20); // Noise floor
+                if (dataset.label === dominantEmotion) {
+                    val = confidence;
+                }
+
+                dataset.data.push(val);
+
+                if (dataset.data.length > 20) {
+                    dataset.data.shift();
+                }
+            });
+
+            window.liveEmotionChart.update('none'); // Efficient update
         }
 
         // Update individual emotion item
@@ -2807,6 +2863,41 @@
                 }
             });
 
+            // Init Live Chart
+            const liveCtx = document.getElementById('live-emotion-chart').getContext('2d');
+            window.liveEmotionChart = new Chart(liveCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: emotions.map(emo => ({
+                        label: emo,
+                        data: [],
+                        borderColor: emotionColors[emo],
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            display: false
+                        },
+                        x: {
+                            display: false
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
             // Settings Modal Logic
             const settingsModal = document.getElementById('settings-modal');
             const openSettingsBtn = document.getElementById('open-settings');
@@ -2816,6 +2907,11 @@
 
             openSettingsBtn.addEventListener('click', () => {
                 settingsModal.style.display = 'block';
+                // Load current theme state into toggle
+                const themeToggle = document.getElementById('theme-toggle');
+                if (themeToggle && appSettings) {
+                    themeToggle.checked = appSettings.theme === 'light';
+                }
             });
 
             closeSettingsBtn.addEventListener('click', () => {
@@ -2829,11 +2925,20 @@
                     const realTimeElem = document.getElementById('real-time-toggle');
                     const compactElem = document.getElementById('compact-mode-toggle');
                     const autoSaveElem = document.getElementById('auto-save-toggle');
+                    const themeElem = document.getElementById('theme-toggle');
 
                     if (sensitivityElem) appSettings.aiSensitivity = sensitivityElem.value;
                     if (realTimeElem) appSettings.realTimeProcessing = realTimeElem.checked;
                     if (compactElem) appSettings.compactMode = compactElem.checked;
                     if (autoSaveElem) appSettings.autoSaveReports = autoSaveElem.checked;
+                    if (themeElem) {
+                        appSettings.theme = themeElem.checked ? 'light' : 'dark';
+                        if (appSettings.theme === 'light') {
+                            document.body.classList.add('light-mode');
+                        } else {
+                            document.body.classList.remove('light-mode');
+                        }
+                    }
 
                     // Apply Compact Mode
                     if (appSettings.compactMode) {
